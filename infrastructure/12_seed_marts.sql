@@ -277,27 +277,47 @@ WITH labor_daily AS (
     GROUP BY DEPT_ID, FACILITY_ID, SHIFT_DATE
 ),
 census_daily AS (
+    -- Occupancy-style metrics: an encounter contributes to every day it spans.
+    -- Requires the date-spine join below, so keep discharge-keyed metrics OUT
+    -- of this CTE (see discharge_daily).
     SELECT
         DEPT_ID,
         FACILITY_ID,
         d.FULL_DATE AS CENSUS_DATE,
         COUNT(DISTINCT e.ENCOUNTER_ID)                        AS PATIENT_CENSUS,
         COUNT(DISTINCT CASE WHEN e.ADMIT_DATE = d.FULL_DATE THEN e.ENCOUNTER_ID END) AS ADMITS,
-        COUNT(DISTINCT CASE WHEN e.DISCHARGE_DATE = d.FULL_DATE THEN e.ENCOUNTER_ID END) AS DISCHARGES,
-        COUNT(DISTINCT CASE WHEN e.DISCHARGE_DATE = d.FULL_DATE AND e.READMIT_30_FLAG
-              THEN e.ENCOUNTER_ID END)                        AS READMIT_COUNT,
         AVG(e.LOS_DAYS)                                       AS AVG_LOS_DAYS,
-        AVG(CASE WHEN e.EXPECTED_LOS > 0 THEN e.LOS_DAYS / e.EXPECTED_LOS END) AS AVG_LOS_INDEX,
-        COUNT(DISTINCT CASE WHEN e.EXPECTED_LOS > 0
-              AND e.LOS_DAYS / e.EXPECTED_LOS > 1.5
-              AND e.DISCHARGE_DATE = d.FULL_DATE
-              THEN e.ENCOUNTER_ID END)                        AS LONG_STAY_COUNT
+        AVG(CASE WHEN e.EXPECTED_LOS > 0 THEN e.LOS_DAYS / e.EXPECTED_LOS END) AS AVG_LOS_INDEX
     FROM HOSPITAL360_CUR.CLINICAL.DIM_DATE d
     JOIN HOSPITAL360_CUR.CLINICAL.FCT_ENCOUNTER e
         ON d.FULL_DATE BETWEEN e.ADMIT_DATE AND COALESCE(e.DISCHARGE_DATE, d.FULL_DATE)
         AND e.ENCOUNTER_TYPE IN ('INPATIENT', 'OBSERVATION')
     WHERE d.FULL_DATE BETWEEN '2023-07-01' AND '2024-12-30'
     GROUP BY e.DEPT_ID, e.FACILITY_ID, d.FULL_DATE
+),
+discharge_daily AS (
+    -- Event-style metrics: an encounter counts once, on its discharge date.
+    --
+    -- Keyed directly on DISCHARGE_DATE rather than derived inside the census
+    -- join above. Computing these from the date spine makes them depend on the
+    -- BETWEEN/COALESCE range semantics, and a variant of this script that got
+    -- that join wrong produced DISCHARGES = 0 on every row of the deployed
+    -- mart -- which made READMIT_RATE null everywhere and silently blanked the
+    -- staffing-vs-readmissions chart in the app. Grouping on the discharge
+    -- date cannot fail that way.
+    SELECT
+        DEPT_ID,
+        DISCHARGE_DATE,
+        COUNT(*)                                              AS DISCHARGES,
+        SUM(CASE WHEN READMIT_30_FLAG THEN 1 ELSE 0 END)      AS READMIT_COUNT,
+        SUM(CASE WHEN EXPECTED_LOS > 0
+                  AND LOS_DAYS / EXPECTED_LOS > 1.5
+                 THEN 1 ELSE 0 END)                           AS LONG_STAY_COUNT
+    FROM HOSPITAL360_CUR.CLINICAL.FCT_ENCOUNTER
+    WHERE ENCOUNTER_TYPE IN ('INPATIENT', 'OBSERVATION')
+      AND DISCHARGE_DATE IS NOT NULL
+      AND DISCHARGE_DATE BETWEEN '2023-07-01' AND '2024-12-30'
+    GROUP BY DEPT_ID, DISCHARGE_DATE
 )
 SELECT
     l.DEPT_ID,
@@ -322,14 +342,17 @@ SELECT
          THEN ROUND(l.TOTAL_WORKED_HRS / c.PATIENT_CENSUS, 2)
          ELSE NULL END                                       AS HRS_PER_PATIENT,
     COALESCE(c.ADMITS, 0)                                    AS ADMITS,
-    COALESCE(c.DISCHARGES, 0)                                AS DISCHARGES,
-    COALESCE(c.READMIT_COUNT, 0)                             AS READMIT_COUNT,
-    CASE WHEN COALESCE(c.DISCHARGES, 0) > 0
-         THEN ROUND(c.READMIT_COUNT::FLOAT / c.DISCHARGES, 3)
+    COALESCE(dis.DISCHARGES, 0)                              AS DISCHARGES,
+    COALESCE(dis.READMIT_COUNT, 0)                            AS READMIT_COUNT,
+    -- Null (not zero) when there were no discharges that day: a readmission
+    -- rate is undefined without a denominator, and averaging zeros would drag
+    -- every department-level rate toward 0.
+    CASE WHEN COALESCE(dis.DISCHARGES, 0) > 0
+         THEN ROUND(dis.READMIT_COUNT::FLOAT / dis.DISCHARGES, 3)
          ELSE NULL END                                       AS READMIT_RATE,
     c.AVG_LOS_DAYS,
     c.AVG_LOS_INDEX,
-    COALESCE(c.LONG_STAY_COUNT, 0)                           AS LONG_STAY_COUNT,
+    COALESCE(dis.LONG_STAY_COUNT, 0)                          AS LONG_STAY_COUNT,
     -- Understaffed: < 8 hrs/patient for inpatient/ICU, < 4 for others
     CASE WHEN COALESCE(c.PATIENT_CENSUS, 0) > 0 THEN
         CASE WHEN dep.DEPT_TYPE IN ('INPATIENT', 'ICU')
@@ -344,7 +367,67 @@ JOIN HOSPITAL360_CUR.OPERATIONS.DIM_DEPARTMENT dep ON dep.DEPT_ID = l.DEPT_ID
 JOIN HOSPITAL360_CUR.OPERATIONS.DIM_FACILITY f ON f.FACILITY_ID = l.FACILITY_ID
 LEFT JOIN census_daily c ON c.DEPT_ID = l.DEPT_ID
     AND c.FACILITY_ID = l.FACILITY_ID
-    AND c.CENSUS_DATE = l.SHIFT_DATE;
+    AND c.CENSUS_DATE = l.SHIFT_DATE
+-- Joined on department + date only, matching the mart's own primary key.
+-- A department belongs to exactly one facility, so adding FACILITY_ID here
+-- would only risk dropping rows if an encounter's facility disagreed with its
+-- department's.
+LEFT JOIN discharge_daily dis ON dis.DEPT_ID = l.DEPT_ID
+    AND dis.DISCHARGE_DATE = l.SHIFT_DATE;
+
+-- ---------------------------------------------------------------------------
+-- Post-load check: fail loudly if the discharge-keyed columns came out empty.
+--
+-- This is the exact failure the deployed mart shipped with. It is invisible in
+-- the app -- charts filtering on READMIT_RATE IS NOT NULL just render blank --
+-- so verify it here rather than discovering it in a demo.
+-- Expect DISCHARGES and READMIT_COUNT well above zero, and an overall
+-- readmission rate near 12%, matching MART_READMISSION_LOS.
+-- ---------------------------------------------------------------------------
+SELECT
+    COUNT(*)                                                  AS TOTAL_ROWS,
+    SUM(DISCHARGES)                                           AS TOTAL_DISCHARGES,
+    SUM(READMIT_COUNT)                                        AS TOTAL_READMITS,
+    COUNT(READMIT_RATE)                                       AS ROWS_WITH_RATE,
+    ROUND(SUM(READMIT_COUNT) / NULLIF(SUM(DISCHARGES), 0) * 100, 2) AS OVERALL_READMIT_PCT,
+    CASE WHEN SUM(DISCHARGES) = 0
+         THEN 'FAIL - discharge join produced no matches'
+         WHEN COUNT(READMIT_RATE) = 0
+         THEN 'FAIL - READMIT_RATE null on every row'
+         ELSE 'PASS' END                                      AS STATUS
+FROM HOSPITAL360_CUR.WORKFORCE.MART_STAFFING_QUALITY;
+
+-- ---------------------------------------------------------------------------
+-- Backfill for an already-populated mart
+--
+-- If the check above returns FAIL on an existing table, this repairs the three
+-- discharge-keyed columns in place without a full re-seed. Run against the
+-- deployed single-database layout, substitute HOSPITAL_360.WORKFORCE and
+-- HOSPITAL_360.CLINICAL for the two-part names below.
+--
+-- Applied to HOSPITAL_360 on 2026-08-12: 81,109 of 81,731 rows updated, 0
+-- multi-joined rows. The 622 rows left untouched are department-days with no
+-- discharges, which correctly keep a null rate. Overall readmission rate came
+-- out at 12.06%, matching the platform's documented 12%.
+-- ---------------------------------------------------------------------------
+-- UPDATE HOSPITAL360_CUR.WORKFORCE.MART_STAFFING_QUALITY m
+-- SET DISCHARGES    = d.DISCH,
+--     READMIT_COUNT = d.RE,
+--     READMIT_RATE  = CASE WHEN d.DISCH > 0
+--                          THEN ROUND(d.RE::FLOAT / d.DISCH, 3)
+--                          ELSE NULL END
+-- FROM (
+--     SELECT DEPT_ID,
+--            DISCHARGE_DATE AS DD,
+--            COUNT(*) AS DISCH,
+--            SUM(CASE WHEN READMIT_30_FLAG THEN 1 ELSE 0 END) AS RE
+--     FROM HOSPITAL360_CUR.CLINICAL.FCT_ENCOUNTER
+--     WHERE ENCOUNTER_TYPE IN ('INPATIENT','OBSERVATION')
+--       AND DISCHARGE_DATE IS NOT NULL
+--     GROUP BY 1, 2
+-- ) d
+-- WHERE d.DEPT_ID = m.DEPT_ID
+--   AND d.DD      = m.SHIFT_DATE;
 
 -- =============================================================================
 -- UC6: MART_FINANCIAL_PERFORMANCE

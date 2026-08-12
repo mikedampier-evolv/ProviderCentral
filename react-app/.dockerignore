@@ -1,0 +1,19 @@
+# Secrets — never bake these into an image. On Cloud Run the values arrive as
+# env vars from Secret Manager, and load_dotenv() silently no-ops without a file.
+.env
+.env.*
+
+# Installed fresh by `npm ci` in the build stage.
+node_modules
+
+# Built inside the image by the build stage; a stale local copy would shadow it.
+dist
+
+# Not needed at runtime.
+.git
+.gitignore
+README.md
+*.log
+server/flask.log
+eslint.config.js
+.DS_Store

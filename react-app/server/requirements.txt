@@ -1,5 +1,10 @@
 flask>=3.0
 flask-cors
-snowflake-connector-python
 python-dotenv
 requests
+gunicorn
+
+# snowflake-connector-python was removed: nothing imports it. The app talks to
+# Snowflake over the SQL REST API with `requests`. It pulls pyarrow and pandas,
+# which added hundreds of MB to the container image for no runtime benefit.
+# Add it back if the app ever moves to key-pair auth via the connector.

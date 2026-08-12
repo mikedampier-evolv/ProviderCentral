@@ -1,13 +1,25 @@
 import os
 import json
-from flask import Flask, request, jsonify, Response, stream_with_context
+from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import requests as http_requests
 
+# Local dev only. In the container there is no .env and this silently no-ops --
+# Cloud Run supplies the same names as env vars (SNOWFLAKE_PAT from Secret
+# Manager, the rest as plain values).
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-app = Flask(__name__)
+# The built SPA. Same relative path locally (react-app/dist) and in the image
+# (/app/dist), because the Dockerfile keeps server/ and dist/ as siblings.
+DIST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'dist'))
+
+# static_folder=None: Flask's built-in static handler is disabled so the SPA
+# catch-all at the bottom of this file is the single path for serving files.
+app = Flask(__name__, static_folder=None)
+
+# Only matters for local dev, where Vite serves the UI on :5173 and proxies
+# /api here. In the container both are same-origin and this is a no-op.
 CORS(app)
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT")
@@ -397,7 +409,32 @@ def create_alert():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_spa(path):
+    """Serve the built SPA, falling back to index.html for client-side routes.
+
+    Flask matches the explicit /api/* rules above before this one -- static
+    segments outrank a <path:> converter regardless of definition order -- so
+    this only ever sees UI traffic. The explicit guard below is belt and braces:
+    without it an unknown /api/typo would render index.html with a 200, and a
+    fetch would fail on unexpected HTML rather than a clean 404.
+    """
+    if path.startswith("api/"):
+        return jsonify({"error": "Not found"}), 404
+
+    if path and os.path.isfile(os.path.join(DIST_DIR, path)):
+        return send_from_directory(DIST_DIR, path)
+
+    # Deep links like /readmission are routes inside BrowserRouter, not files.
+    return send_from_directory(DIST_DIR, "index.html")
+
+
 if __name__ == "__main__":
-    print(f"Flask proxy running on http://localhost:3001")
+    # Local dev entrypoint only -- the container runs gunicorn (see Dockerfile).
+    # PORT is read rather than hardcoded because Cloud Run assigns it, and the
+    # cf-access-proxy sidecar moves the app to 8081 once attached.
+    port = int(os.environ.get("PORT", 3001))
+    print(f"Flask proxy running on http://localhost:{port}")
     print(f"Connected to: {BASE_URL}")
-    app.run(host="0.0.0.0", port=3001, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
