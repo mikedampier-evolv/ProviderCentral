@@ -1,1 +1,102 @@
+# ---------- Secrets & credentials ----------
+# Never commit these. Snowflake PATs, key pairs, and connection files in particular.
 .env
+.env.*
+!.env.example
+!.env.template
+secrets.toml
+.streamlit/secrets.toml
+**/.streamlit/secrets.toml
+connections.toml
+config.toml.local
+*.pem
+*.p8
+*.key
+*.pfx
+*.p12
+id_rsa*
+rsa_key*
+service-account*.json
+
+# ---------- Python / Streamlit ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+ENV/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.ipynb_checkpoints/
+
+# ---------- Node / React ----------
+# react-app/.gitignore covers the app itself; these are belt-and-braces
+# for anything added at the repo root later.
+node_modules/
+.vite/
+.next/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+# Gzipped copies produced when staging app files to a Snowflake stage.
+# Regenerated on every deploy — never commit them.
+*.html.gz
+*.js.gz
+*.css.gz
+*.svg.gz
+
+# ---------- Snowflake / data tooling ----------
+.snowflake/
+target/
+dbt_packages/
+logs/
+*.duckdb
+*.sqlite
+*.sqlite3
+
+# ---------- Local data & exports ----------
+# Keep sample/seed data tracked deliberately; ignore ad-hoc pulls.
+*.csv.gz
+*.parquet
+/data/
+/exports/
+/tmp/
+/scratch/
+
+# ---------- Agent & editor state ----------
+.cortex/
+.claude/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------- Office lock files ----------
+# Word/PowerPoint/Excel write these while a document is open.
+~$*
+
+# ---------- OS cruft ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini

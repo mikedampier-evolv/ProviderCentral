@@ -4,9 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"python server/app.py\" \"vite\"",
+    "predev": "npm run kill-server",
+    "dev": "concurrently \"python3 server/app.py\" \"vite\"",
     "build": "tsc -b && vite build",
-    "server": "python server/app.py",
+    "preserver": "npm run kill-server",
+    "server": "python3 server/app.py",
+    "kill-server": "lsof -ti tcp:3001 | xargs kill 2>/dev/null; exit 0",
     "lint": "eslint .",
     "preview": "vite preview"
   },

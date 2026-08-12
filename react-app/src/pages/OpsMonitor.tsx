@@ -21,7 +21,7 @@ export default function OpsMonitor() {
   );
   const anomalies = useSnowflakeQuery(
     'ops-anomalies',
-    `SELECT COUNT(*) AS N FROM HOSPITAL_360.ML_PREDICTIONS.PRED_ANOMALY_DETECTION`
+    `SELECT COUNT(*) AS N FROM HOSPITAL_360.ML_PREDICTIONS.PRED_DENIAL_ANOMALIES`
   );
 
   const predTables = useSnowflakeQuery(
