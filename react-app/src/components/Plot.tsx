@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect } from 'react';
 import Plotly from 'plotly.js-dist-min';
 
 interface PlotProps {

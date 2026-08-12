@@ -2,7 +2,7 @@ import Plot from '../components/Plot';
 import KPICard from '../components/KPICard';
 import { ChartCard } from '../components/ChartCard';
 import { useSnowflakeQuery } from '../hooks/useSnowflakeQuery';
-import { COLORS, COLOR_SEQ, darkLayout } from '../lib/chartTheme';
+import { COLORS, darkLayout } from '../lib/chartTheme';
 
 export default function FinancialPerformance() {
   const kpi = useSnowflakeQuery(

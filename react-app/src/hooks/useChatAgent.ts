@@ -126,7 +126,6 @@ export function useChatAgent() {
                       role: "assistant",
                       content: assistantText,
                       thinking: thinkingText, charts,
-                      charts,
                     };
                     return updated;
                   });
@@ -140,7 +139,6 @@ export function useChatAgent() {
                         role: "assistant",
                         content: assistantText,
                         thinking: thinkingText, charts,
-                        charts,
                       };
                       return updated;
                     });
