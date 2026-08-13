@@ -115,7 +115,7 @@ export default function ChatWidget() {
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-50 flex flex-col rounded-xl border border-[#D15635] bg-[#111] shadow-2xl"
+      className="fixed bottom-6 right-6 z-50 flex flex-col rounded-xl border border-[#D15635] bg-white shadow-2xl"
       style={{ width: `${size.width}px`, height: `${size.height}px` }}
     >
       {/* Resize handle (top-left corner) */}
@@ -131,13 +131,13 @@ export default function ChatWidget() {
         </svg>
       </div>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#D15635]">
-        <span className="text-white font-semibold text-sm">Provider Chat</span>
+      <div className="flex items-center justify-between px-4 py-3 rounded-t-xl bg-[#F0EDE8] border-b border-[#D15635]">
+        <span className="text-[#D15635] font-semibold text-sm">Provider Chat</span>
         <div className="flex gap-2">
-          <button onClick={clearMessages} className="text-gray-400 hover:text-white text-xs">
+          <button onClick={clearMessages} className="text-gray-500 hover:text-gray-900 text-xs">
             Clear
           </button>
-          <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-white">
+          <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-gray-900">
             <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -149,12 +149,12 @@ export default function ChatWidget() {
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && (
           <div className="space-y-2">
-            <p className="text-gray-500 text-sm">Ask a question about the data:</p>
+            <p className="text-gray-600 text-sm">Ask a question about the data:</p>
             {sampleQuestions.map((q) => (
               <button
                 key={q}
                 onClick={() => handleSend(q)}
-                className="block w-full text-left text-sm px-3 py-2 rounded-lg border border-[#D15635] text-gray-300 hover:border-[#D15635] hover:text-white transition-colors"
+                className="block w-full text-left text-sm px-3 py-2 rounded-lg border border-[#D15635] text-gray-700 hover:border-[#D15635] hover:text-gray-900 transition-colors"
               >
                 {q}
               </button>
@@ -167,12 +167,12 @@ export default function ChatWidget() {
               className={`max-w-[85%] rounded-lg text-sm ${
                 msg.role === 'user'
                   ? 'bg-[#D15635] text-white px-3 py-2'
-                  : 'bg-[#1a1a1a] text-gray-200 border border-[#D15635] px-3 py-2'
+                  : 'bg-[#F5F2ED] text-gray-900 border border-[#D15635] px-3 py-2'
               }`}
             >
               {msg.role === 'assistant' && msg.thinking && (
                 <details className="mb-2" open={isStreaming && i === messages.length - 1}>
-                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300 flex items-center gap-1.5">
+                  <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-900 flex items-center gap-1.5">
                     {isStreaming && i === messages.length - 1 ? (
                       <>
                         <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -212,7 +212,7 @@ export default function ChatWidget() {
                         onChange={(e) => setEmailTarget({ ...emailTarget, address: e.target.value })}
                         onKeyDown={(e) => e.key === 'Enter' && handleEmailSubmit()}
                         placeholder="email@example.com"
-                        className="flex-1 bg-[#111] border border-[#D4CFC8] rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#D15635]"
+                        className="flex-1 bg-white border border-[#D4CFC8] rounded px-2 py-1 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#D15635]"
                         autoFocus
                       />
                       <button
@@ -223,7 +223,7 @@ export default function ChatWidget() {
                       </button>
                       <button
                         onClick={() => setEmailTarget(null)}
-                        className="text-xs px-1 py-1 text-gray-500 hover:text-white"
+                        className="text-xs px-1 py-1 text-gray-500 hover:text-gray-900"
                       >
                         Cancel
                       </button>
@@ -232,7 +232,7 @@ export default function ChatWidget() {
                     /* Alert form - metric picker */
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-gray-400 whitespace-nowrap">Alert me when</span>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">Alert me when</span>
                         <select
                           value={alertTarget.metric}
                           onChange={(e) => {
@@ -248,7 +248,7 @@ export default function ChatWidget() {
                             const d = defaults[m] || { op: 'exceeds', thresh: '10' };
                             setAlertTarget({ ...alertTarget, metric: m, operator: d.op, threshold: d.thresh });
                           }}
-                          className="flex-1 bg-[#111] border border-[#D4CFC8] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#D15635]"
+                          className="flex-1 bg-white border border-[#D4CFC8] rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-[#D15635]"
                         >
                           <option value="readmission_rate">Readmission Rate (%)</option>
                           <option value="avg_los">Avg Length of Stay (days)</option>
@@ -262,7 +262,7 @@ export default function ChatWidget() {
                         <select
                           value={alertTarget.operator}
                           onChange={(e) => setAlertTarget({ ...alertTarget, operator: e.target.value })}
-                          className="bg-[#111] border border-[#D4CFC8] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#D15635]"
+                          className="bg-white border border-[#D4CFC8] rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-[#D15635]"
                         >
                           <option value="exceeds">exceeds</option>
                           <option value="falls_below">falls below</option>
@@ -271,7 +271,7 @@ export default function ChatWidget() {
                           type="number"
                           value={alertTarget.threshold}
                           onChange={(e) => setAlertTarget({ ...alertTarget, threshold: e.target.value })}
-                          className="w-16 bg-[#111] border border-[#D4CFC8] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#D15635]"
+                          className="w-16 bg-white border border-[#D4CFC8] rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-[#D15635]"
                         />
                       </div>
                       <input
@@ -279,13 +279,13 @@ export default function ChatWidget() {
                         value={alertTarget.email}
                         onChange={(e) => setAlertTarget({ ...alertTarget, email: e.target.value })}
                         placeholder="Notify email address"
-                        className="w-full bg-[#111] border border-[#D4CFC8] rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#D15635]"
+                        className="w-full bg-white border border-[#D4CFC8] rounded px-2 py-1 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#D15635]"
                       />
                       <div className="flex items-center gap-2">
                         <select
                           value={alertTarget.schedule}
                           onChange={(e) => setAlertTarget({ ...alertTarget, schedule: e.target.value })}
-                          className="bg-[#111] border border-[#D4CFC8] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#D15635]"
+                          className="bg-white border border-[#D4CFC8] rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-[#D15635]"
                         >
                           <option value="60">Check every 1 hour</option>
                           <option value="360">Check every 6 hours</option>
@@ -300,7 +300,7 @@ export default function ChatWidget() {
                         </button>
                         <button
                           onClick={() => setAlertTarget(null)}
-                          className="text-xs px-1 py-1 text-gray-500 hover:text-white"
+                          className="text-xs px-1 py-1 text-gray-500 hover:text-gray-900"
                         >
                           Cancel
                         </button>
@@ -339,9 +339,9 @@ export default function ChatWidget() {
         {/* Email status toast */}
         {emailStatus && (
           <div className={`text-xs text-center py-1 rounded ${
-            emailStatus === 'sending' ? 'text-yellow-400' :
-            emailStatus === 'sent' ? 'text-green-400' :
-            'text-red-400'
+            emailStatus === 'sending' ? 'text-yellow-600' :
+            emailStatus === 'sent' ? 'text-green-600' :
+            'text-red-600'
           }`}>
             {emailStatus === 'sending' ? 'Sending email...' :
              emailStatus === 'sent' ? 'Email sent successfully!' :
@@ -351,9 +351,9 @@ export default function ChatWidget() {
         {/* Alert status toast */}
         {alertStatus && (
           <div className={`text-xs text-center py-1 rounded ${
-            alertStatus === 'creating' ? 'text-yellow-400' :
-            alertStatus === 'created' ? 'text-green-400' :
-            'text-red-400'
+            alertStatus === 'creating' ? 'text-yellow-600' :
+            alertStatus === 'created' ? 'text-green-600' :
+            'text-red-600'
           }`}>
             {alertStatus === 'creating' ? 'Creating Snowflake Alert...' :
              alertStatus === 'created' ? 'Alert created and activated!' :
@@ -364,14 +364,14 @@ export default function ChatWidget() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-[#D15635] px-4 py-3">
+      <div className="rounded-b-xl bg-[#F0EDE8] border-t border-[#D15635] px-4 py-3">
         <div className="flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Ask about your data..."
-            className="flex-1 bg-[#1a1a1a] border border-[#D15635] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D15635]"
+            className="flex-1 bg-white border border-[#D15635] rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#D15635]"
           />
           <button
             onClick={() => handleSend()}
