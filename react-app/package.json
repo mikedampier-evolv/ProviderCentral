@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "predev": "npm run kill-server",
-    "dev": "concurrently \"python3 server/app.py\" \"vite\"",
+    "dev": "concurrently \".venv/bin/python server/app.py\" \"vite\"",
     "build": "tsc -b && vite build",
     "preserver": "npm run kill-server",
-    "server": "python3 server/app.py",
+    "server": ".venv/bin/python server/app.py",
+    "server:prod": ".venv/bin/gunicorn --chdir server --bind 0.0.0.0:${PORT:-3001} --worker-class gthread --workers 1 --threads 16 --timeout 0 --access-logfile - --error-logfile - app:app",
+    "setup:server": "python3.12 -m venv .venv && .venv/bin/python -m pip install -r server/requirements.txt",
     "kill-server": "lsof -ti tcp:3001 | xargs kill 2>/dev/null; exit 0",
     "lint": "eslint .",
     "preview": "vite preview"
