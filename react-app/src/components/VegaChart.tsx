@@ -24,17 +24,17 @@ export default function VegaChart({ spec }: VegaChartProps) {
     parsedSpec.height = 250;
     parsedSpec.autosize = { type: 'fit', contains: 'padding' };
     // Matches the assistant message bubble the chart renders inside.
-    parsedSpec.background = '#1a1a1a';
+    parsedSpec.background = '#F5F2ED';
     parsedSpec.config = {
       ...parsedSpec.config,
       axis: {
-        labelColor: '#a0a0a0',
-        titleColor: '#c0c0c0',
-        gridColor: '#333',
-        domainColor: '#555',
+        labelColor: '#4b5563',
+        titleColor: '#1f2937',
+        gridColor: '#E0DBD3',
+        domainColor: '#C8C1B8',
       },
-      legend: { labelColor: '#a0a0a0', titleColor: '#c0c0c0' },
-      title: { color: '#e0e0e0' },
+      legend: { labelColor: '#4b5563', titleColor: '#1f2937' },
+      title: { color: '#1f2937' },
       view: { stroke: 'transparent' },
     };
 
@@ -43,7 +43,7 @@ export default function VegaChart({ spec }: VegaChartProps) {
     let result: { finalize: () => void } | null = null;
     let cancelled = false;
 
-    embed(containerRef.current, parsedSpec, { actions: false, theme: 'dark' })
+    embed(containerRef.current, parsedSpec, { actions: false })
       .then((r) => {
         if (cancelled) {
           r.finalize();
